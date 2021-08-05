@@ -15,7 +15,9 @@ public class ScrollSubstitute : MonoBehaviour
     private ScrollSubstitute mNextSubstitute; //ºóÏî
 
     private RectTransform mRectTrans;
+    private Rect mItemRect;
 
+    public bool ShowDebugLine = false;
 
     private void CopyRectTransform(RecycleRectTransRecord itemRt)
     {
@@ -30,6 +32,7 @@ public class ScrollSubstitute : MonoBehaviour
         rt.sizeDelta = itemRt.sizeDelta;
         rt.localScale = itemRt.localScale;
         rt.localRotation = itemRt.localRotation;
+        rt.anchoredPosition = itemRt.anchoredPosition;
     }
 
     public void InitializeScrollSubstitute(int entityId,RecycleRectTransRecord rt, RecyclePopFunc popFunc, RecyclePushFunc pushFunc,string itemPath, IRecycleScrollHandle handle)
@@ -68,23 +71,33 @@ public class ScrollSubstitute : MonoBehaviour
         mLastSubstitute = last;
     }
 
-    private bool CheckInView(float contentScaleX, float contentScaleY, Rect visibleContentRect)
+    private bool CheckInView(float scaleX, float scaleY, Rect visibleContentRect)
     {
-        float x_min = mRectTrans.localPosition.x - mRectTrans.pivot.x * mRectTrans.rect.width * contentScaleX;
-        float y_min = mRectTrans.localPosition.y - mRectTrans.pivot.y * mRectTrans.rect.height * contentScaleY;
+        float x_min = (mRectTrans.localPosition.x - mRectTrans.pivot.x * mRectTrans.rect.width ) * scaleX;
+        float y_min = (mRectTrans.localPosition.y - mRectTrans.pivot.y * mRectTrans.rect.height) * scaleY;
 
-        Rect substituteRect = new Rect(new Vector2(x_min, y_min), new Vector2(contentScaleX * mRectTrans.rect.width, contentScaleY * mRectTrans.rect.height));
-        return visibleContentRect.Overlaps(substituteRect);
+        mItemRect = new Rect(new Vector2(x_min, y_min), new Vector2(mRectTrans.rect.width*scaleX, mRectTrans.rect.height*scaleY));
+        return visibleContentRect.Overlaps(mItemRect);
     }
 
-    public void UpdateScrollSubstitute(float contentScaleX,float contentScaleY,Rect visibleContentRect)
+    public void PushItem()
     {
-        bool inView = CheckInView(contentScaleX, contentScaleY, visibleContentRect);
+        mPushFunc(mItemPath, mItem);
+    }
+
+    public GameObject PopItem()
+    {
+        return mPopFunc(mItemPath); 
+    }
+
+    public void UpdateScrollSubstitute(Vector3 viewportScale, Vector3 contentScale, Rect visibleContentRect)
+    {
+        bool inView = CheckInView(viewportScale.x*contentScale.x, viewportScale.y*viewportScale.y, visibleContentRect);
         if (inView && mItem == null)
         {
-            mItem = mPopFunc(mItemPath);
+            mItem = PopItem();
 
-            if(mItem != null)
+            if (mItem != null)
             {
                 mItem.transform.SetParent(this.transform);
                 mItem.transform.localPosition = Vector3.zero;
@@ -99,7 +112,7 @@ public class ScrollSubstitute : MonoBehaviour
         }
         else if(!inView && mItem != null)
         {
-            mPushFunc(mItemPath, mItem);
+            PushItem();
             if (mHandle != null)
             {
                 mHandle.OnItemExit(mEntityId,mItem);
@@ -108,4 +121,21 @@ public class ScrollSubstitute : MonoBehaviour
             mItem = null;
         }
     }
+
+    private void OnDrawGizmos()
+    {
+        if (!ShowDebugLine)
+            return;
+
+        Gizmos.color = Color.green;
+
+        if (mItemRect != null)
+        {
+            Gizmos.DrawLine(new Vector2(mItemRect.xMin, mItemRect.yMin), new Vector2(mItemRect.xMax, mItemRect.yMin));
+            Gizmos.DrawLine(new Vector2(mItemRect.xMax, mItemRect.yMin), new Vector2(mItemRect.xMax, mItemRect.yMax));
+            Gizmos.DrawLine(new Vector2(mItemRect.xMax, mItemRect.yMax), new Vector2(mItemRect.xMin, mItemRect.yMax));
+            Gizmos.DrawLine(new Vector2(mItemRect.xMin, mItemRect.yMax), new Vector2(mItemRect.xMin, mItemRect.yMin));
+        }
+    }
+
 }

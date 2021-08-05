@@ -8,8 +8,7 @@ public delegate void RecyclePushFunc(string itemPath,GameObject item);
 
 public class RecycleScrollView : ScrollRect
 {
-    //[SerializeField]
-    public Transform mPoolNode;
+    public Transform RecyclePoolNode;
 
     private ScrollSubstitute mHeadSubstitute; // Í·²¿
     private ScrollSubstitute mTailSubstitute; //Î²²¿
@@ -22,12 +21,16 @@ public class RecycleScrollView : ScrollRect
     private IRecycleScrollLoader mLoader;
     private IRecycleScrollHandle mHandle;
 
+    private Rect mVisibleContentRect;
+    public bool ShowDebugLine = false;
+
+    private int mEntityRecord = -1;
 
     public void InitializeRecycleScrollView(IRecycleScrollLoader loader,IRecycleScrollHandle handle)
     {
         mLoader = loader;
         mHandle = handle;
-
+        mEntityRecord = -1;
         mItemPools = new Dictionary<string, RecycleScrollItemPool>();
         mItemRectPool = new Dictionary<string, RecycleRectTransRecord>();
     }
@@ -42,7 +45,8 @@ public class RecycleScrollView : ScrollRect
         float x_min = inverse_pos.x  - viewport.pivot.x * viewport.rect.width;
         float y_min = inverse_pos.y - viewport.pivot.y * viewport.rect.height;
 
-        return new Rect(new Vector2(x_min,y_min), viewport.rect.size);
+        mVisibleContentRect = new Rect(new Vector2(x_min, y_min), viewport.rect.size);
+        return mVisibleContentRect;
     }
 
     public void PushItem(string itemPath,GameObject item)
@@ -53,7 +57,7 @@ public class RecycleScrollView : ScrollRect
             return;
         }
 
-        item.transform.SetParent(mPoolNode);
+        item.transform.SetParent(RecyclePoolNode);
 
         RecycleScrollItemPool itemPool;
         if(!mItemPools.TryGetValue(itemPath,out itemPool))
@@ -102,36 +106,57 @@ public class RecycleScrollView : ScrollRect
         return null;
     }
 
-    public int AddNewItem(string path)
+    public int AddNewItemAt(string path, string name, int index)
     {
-        int tailEntityId = 0;
-        if (mTailSubstitute != null)
-        {
-            tailEntityId = mTailSubstitute.GetEntityId()+1;
-        }
+        mEntityRecord++;
+        int entityId = mEntityRecord;
 
         GameObject subsGo = new GameObject();
+        if (!string.IsNullOrEmpty(name))
+        {
+            subsGo.name = name;
+        }
+        else
+        {
+            subsGo.name = "Recycle_Substitute" + entityId.ToString();
+        }
         subsGo.AddComponent<RectTransform>();
         subsGo.transform.SetParent(content);
+
+        if (index >= 0 && index < content.childCount)
+        {
+            subsGo.transform.SetSiblingIndex(index);
+        }
+        else
+        {
+            Debug.LogErrorFormat("AddNewItemAt Error,index out of range!");
+        }
+
         ScrollSubstitute substitute = subsGo.AddComponent<ScrollSubstitute>();
         RecycleRectTransRecord rt = GetRectTrans(path);
-        substitute.InitializeScrollSubstitute(tailEntityId, rt,PopOrLoadItem, PushItem,path, mHandle);
+        substitute.InitializeScrollSubstitute(entityId, rt, PopOrLoadItem, PushItem, path, mHandle);
         if (mHeadSubstitute == null)
         {
             mHeadSubstitute = substitute;
         }
-        if(mTailSubstitute != null)
+        if (mTailSubstitute != null)
         {
             mTailSubstitute.SetNext(substitute);
             substitute.SetLast(mTailSubstitute);
         }
         mTailSubstitute = substitute;
-        return tailEntityId;
+        return entityId;
+    }
+
+    public int AddNewItem(string path,string name)
+    {
+        int index = content.childCount;
+        return AddNewItemAt(path,name,index);
     }
 
     public void RemoveItem(int entityId)
     {
-        if(mHeadSubstitute == null)
+        if(mHeadSubstitute == null || mTailSubstitute == null)
         {
             Debug.LogError("RemoveItem Failed,no entity in scroll view");
             return;
@@ -153,6 +178,18 @@ public class RecycleScrollView : ScrollRect
                 {
                     next.SetLast(last);
                 }
+
+                if (current.GetEntityId() == mHeadSubstitute.GetEntityId())
+                {
+                    mHeadSubstitute = current.GetNext();
+                }                
+                
+                if (current.GetEntityId() == mTailSubstitute.GetEntityId())
+                {
+                    mTailSubstitute = current.GetLast();
+                }
+
+                GameObject.Destroy(current.gameObject);
                 break;
             }
 
@@ -172,8 +209,24 @@ public class RecycleScrollView : ScrollRect
         ScrollSubstitute toUpdate = mHeadSubstitute;
         while(toUpdate != null)
         {
-            toUpdate.UpdateScrollSubstitute(content.localScale.x,content.localScale.y,mViewport_to_content_rect);
+            toUpdate.UpdateScrollSubstitute(viewport.localScale,content.localScale,mViewport_to_content_rect);
             toUpdate = toUpdate.GetNext();
+        }
+    }
+
+
+    private void OnDrawGizmos()
+    {
+        if (!ShowDebugLine)
+            return;
+
+        Gizmos.color = Color.red;
+        if (mVisibleContentRect != null)
+        {
+            Gizmos.DrawLine(new Vector2(mVisibleContentRect.xMin, mVisibleContentRect.yMin), new Vector2(mVisibleContentRect.xMax, mVisibleContentRect.yMin));
+            Gizmos.DrawLine(new Vector2(mVisibleContentRect.xMax, mVisibleContentRect.yMin), new Vector2(mVisibleContentRect.xMax, mVisibleContentRect.yMax));
+            Gizmos.DrawLine(new Vector2(mVisibleContentRect.xMax, mVisibleContentRect.yMax), new Vector2(mVisibleContentRect.xMin, mVisibleContentRect.yMax));
+            Gizmos.DrawLine(new Vector2(mVisibleContentRect.xMin, mVisibleContentRect.yMax), new Vector2(mVisibleContentRect.xMin, mVisibleContentRect.yMin));
         }
     }
 }

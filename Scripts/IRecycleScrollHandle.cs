@@ -7,4 +7,6 @@ public interface IRecycleScrollHandle
     void OnItemEnter(int entityId,GameObject item);
 
     void OnItemExit(int entityId,GameObject item);
+
+    void OnItemDestroy(int entityId,GameObject item);
 }

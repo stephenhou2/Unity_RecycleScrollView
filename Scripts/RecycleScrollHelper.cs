@@ -15,6 +15,7 @@ public static class RecycleScrollHelper
         {
             record.pivot = rt.pivot;
             record.sizeDelta = rt.sizeDelta;
+            record.anchoredPosition = rt.anchoredPosition;
         }
         return record;
     }

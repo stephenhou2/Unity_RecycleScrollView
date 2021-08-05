@@ -22,6 +22,11 @@ public class TestHandle : IRecycleScrollHandle
     public void OnItemExit(int entityId,GameObject item)
     {
         Debug.LogFormat("Item Exit---entityId:{0}", entityId);
+    }   
+    
+    public void OnItemDestroy(int entityId,GameObject item)
+    {
+        Debug.LogFormat("Item Destroy---entityId:{0}", entityId);
     }
 }
 
@@ -45,7 +50,7 @@ public class RecycleTest : MonoBehaviour
     [ContextMenu("Test")]
     public void Test()
     {
-        view.AddNewItem("1");
+        view.AddNewItem("1","test name");
     }
 
 

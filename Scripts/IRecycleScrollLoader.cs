@@ -5,6 +5,4 @@ using UnityEngine;
 public interface IRecycleScrollLoader
 {
     GameObject LoadRecycleItem(string path);
-
-
 }
