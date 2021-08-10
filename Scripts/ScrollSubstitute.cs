@@ -33,6 +33,7 @@ public class ScrollSubstitute : MonoBehaviour
         rt.localScale = itemRt.localScale;
         rt.localRotation = itemRt.localRotation;
         rt.anchoredPosition = itemRt.anchoredPosition;
+        rt.localPosition = new Vector3(itemRt.localPosition.x,itemRt.localPosition.y,0);
     }
 
     public void InitializeScrollSubstitute(int entityId,RecycleRectTransRecord rt, RecyclePopFunc popFunc, RecyclePushFunc pushFunc,string itemPath, IRecycleScrollHandle handle)
@@ -82,7 +83,10 @@ public class ScrollSubstitute : MonoBehaviour
 
     public void PushItem()
     {
-        mPushFunc(mItemPath, mItem);
+        if(mItem != null)
+        {
+            mPushFunc(mItemPath, mItem);
+        }
     }
 
     public GameObject PopItem()

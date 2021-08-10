@@ -189,6 +189,7 @@ public class RecycleScrollView : ScrollRect
                     mTailSubstitute = current.GetLast();
                 }
 
+                current.PushItem();
                 GameObject.Destroy(current.gameObject);
                 break;
             }
