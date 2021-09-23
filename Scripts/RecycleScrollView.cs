@@ -198,10 +198,23 @@ public class RecycleScrollView : ScrollRect
         }
     }
 
-    protected override void LateUpdate()
+    public GameObject GetRecycleSubstitute(int entityId)
     {
-        base.LateUpdate();
+        ScrollSubstitute current = mHeadSubstitute;
+        while (current != null)
+        {
+            if(current.GetEntityId() == entityId)
+            {
+                return current.gameObject;
+            }
+            current = current.GetNext();
+        }
 
+        return null;
+    }
+
+    private void Update()
+    {
         if (mHeadSubstitute == null) 
             return;
 
